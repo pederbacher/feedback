@@ -1,0 +1,5 @@
+TITLE: Update/Rewrite textbook
+TIME: 2026-04-17T10:21:58.554Z
+---
+The textbook could be updated to incluwde more recent advances/remove outdated topics 
+Make a python version of the code
