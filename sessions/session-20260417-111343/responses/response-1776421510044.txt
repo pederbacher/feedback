@@ -1,0 +1,5 @@
+TITLE: Kostis
+TIME: 2026-04-17T10:25:10.044Z
+---
+It makes sense but a more intense exercise session is required to gain hands on experience.
+Ai could be helpful to catch up with some of the definitions and as a debugging tool. Consider also a collaboration with ChatTutor ( DTU's spinoff)
