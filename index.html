@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback — Setup</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f6f8fa;
+      color: #1f2328;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 3rem 1rem;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+    }
+    h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+    .subtitle { color: #656d76; font-size: .9rem; margin-bottom: 1.75rem; }
+    .field { margin-bottom: 1.1rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .35rem; }
+    label small { font-weight: 400; color: #656d76; }
+    input[type=text], input[type=password] {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9,105,218,.12); }
+    .hint { font-size: .78rem; color: #656d76; margin-top: .35rem; }
+    button.primary {
+      width: 100%;
+      padding: .65rem 1rem;
+      background: #0969da;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      margin-top: .5rem;
+    }
+    button.primary:hover { background: #0860ca; }
+    button.primary:disabled { background: #8ab6e8; cursor: not-allowed; }
+    .hidden { display: none !important; }
+    .result-section { margin-top: 1.5rem; }
+    .result-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #1a7f37; }
+    .qr-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 1.25rem 0;
+      padding: 1rem;
+      background: #f6f8fa;
+      border-radius: 8px;
+    }
+    .url-row {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: .75rem;
+    }
+    .url-row input {
+      flex: 1;
+      font-size: .82rem;
+      background: #f6f8fa;
+      color: #1f2328;
+    }
+    .url-row button {
+      flex-shrink: 0;
+      padding: .55rem .9rem;
+      background: #f6f8fa;
+      color: #1f2328;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      width: auto;
+      margin: 0;
+    }
+    .url-row button:hover { background: #eaf0f8; }
+    .link-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: .5rem;
+    }
+    .link-row a {
+      font-size: .88rem;
+      color: #0969da;
+      text-decoration: none;
+    }
+    .link-row a:hover { text-decoration: underline; }
+    .error {
+      background: #fff8f8;
+      border: 1px solid #f5c2c2;
+      color: #b91c1c;
+      border-radius: 6px;
+      padding: .65rem .9rem;
+      font-size: .88rem;
+      margin-top: 1rem;
+    }
+    .session-id {
+      font-family: monospace;
+      font-size: .82rem;
+      color: #656d76;
+      margin-bottom: .75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Feedback Session Setup</h1>
+    <p class="subtitle">Create a session, then project the QR code for your audience.</p>
+
+    <div id="form-section">
+      <div class="field">
+        <label>GitHub Repository <small>(owner/repo)</small></label>
+        <input type="text" id="repo" placeholder="octocat/my-feedback" autocomplete="off" spellcheck="false">
+        <p class="hint">The repo where GitHub Pages is enabled.</p>
+      </div>
+      <div class="field">
+        <label>GitHub Token</label>
+        <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
+        <p class="hint">
+          Fine-grained PAT with <strong>Contents: Read &amp; Write</strong> for this repo only.
+          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one →</a>
+        </p>
+      </div>
+      <div class="field">
+        <label>Session Title <small>(optional)</small></label>
+        <input type="text" id="title" placeholder="Lecture Q&A — April 17">
+      </div>
+      <button class="primary" id="create-btn" onclick="createSession()">Create Session</button>
+      <div id="error" class="error hidden"></div>
+    </div>
+
+    <div id="result-section" class="result-section hidden">
+      <h2>✓ Session ready</h2>
+      <p class="session-id" id="session-id-label"></p>
+      <div class="qr-wrap">
+        <div id="qrcode"></div>
+      </div>
+      <p style="font-size:.85rem;color:#656d76;margin-bottom:.5rem;font-weight:600;">Share link (scan or paste):</p>
+      <div class="url-row">
+        <input type="text" id="share-url" readonly>
+        <button onclick="copyUrl('share-url', this)">Copy</button>
+      </div>
+      <p style="font-size:.85rem;color:#656d76;margin-bottom:.5rem;font-weight:600;margin-top:.75rem;">Results page (presenter only):</p>
+      <div class="url-row">
+        <input type="text" id="results-url" readonly>
+        <button onclick="copyUrl('results-url', this)">Copy</button>
+      </div>
+      <div class="link-row">
+        <a id="results-link" href="#" target="_blank">Open results →</a>
+        <a href="#" onclick="reset(); return false;">← New session</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toBase64(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    function getOwnerRepo() {
+      const val = document.getElementById('repo').value.trim();
+      const parts = val.split('/');
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+      return { owner: parts[0], repo: parts[1] };
+    }
+
+    async function githubPut(owner, repo, path, token, message, content) {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message, content })
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `GitHub API ${res.status}`);
+      }
+      return res.json();
+    }
+
+    async function createSession() {
+      const gr = getOwnerRepo();
+      if (!gr) { showError('Enter repository as owner/repo'); return; }
+      const { owner, repo } = gr;
+      const token = document.getElementById('token').value.trim();
+      if (!token) { showError('Enter a GitHub token'); return; }
+
+      const btn = document.getElementById('create-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      hideError();
+
+      try {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const sessionId = `session-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const titleVal = document.getElementById('title').value.trim() || 'Feedback Session';
+
+        const meta = JSON.stringify({ sessionId, title: titleVal, created: now.toISOString() }, null, 2);
+        await githubPut(owner, repo, `sessions/${sessionId}/session.json`, token,
+          `Create session ${sessionId}`, toBase64(meta));
+
+        const baseUrl = `https://${owner}.github.io/${repo}`;
+        const shareUrl = `${baseUrl}/submit.html?session=${sessionId}&token=${encodeURIComponent(token)}`;
+        const resultsUrl = `${baseUrl}/results.html?session=${sessionId}&token=${encodeURIComponent(token)}`;
+
+        document.getElementById('session-id-label').textContent = `Session: ${sessionId}  ·  ${titleVal}`;
+        document.getElementById('share-url').value = shareUrl;
+        document.getElementById('results-url').value = resultsUrl;
+        document.getElementById('results-link').href = resultsUrl;
+
+        document.getElementById('qrcode').innerHTML = '';
+        new QRCode(document.getElementById('qrcode'), {
+          text: shareUrl, width: 220, height: 220,
+          colorDark: '#1f2328', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+
+        document.getElementById('form-section').classList.add('hidden');
+        document.getElementById('result-section').classList.remove('hidden');
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Create Session';
+      }
+    }
+
+    function copyUrl(inputId, btn) {
+      const val = document.getElementById(inputId).value;
+      navigator.clipboard.writeText(val).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideError() { document.getElementById('error').classList.add('hidden'); }
+
+    function reset() {
+      document.getElementById('form-section').classList.remove('hidden');
+      document.getElementById('result-section').classList.add('hidden');
+      document.getElementById('qrcode').innerHTML = '';
+      const btn = document.getElementById('create-btn');
+      btn.disabled = false;
+      btn.textContent = 'Create Session';
+      hideError();
+    }
+  </script>
+</body>
+</html>

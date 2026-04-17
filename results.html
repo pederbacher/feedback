@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback Results</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f6f8fa;
+      color: #1f2328;
+      min-height: 100vh;
+      padding: 2.5rem 1rem;
+    }
+    .container { max-width: 780px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-bottom: 1.75rem;
+    }
+    h1 { font-size: 1.5rem; }
+    .subtitle { color: #656d76; font-size: .9rem; margin-top: .2rem; }
+    .toolbar {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: .45rem .85rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      background: #fff;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #1f2328;
+      transition: background .12s;
+    }
+    button:hover { background: #f0f3f6; }
+    button.primary {
+      background: #0969da;
+      color: #fff;
+      border-color: #0969da;
+    }
+    button.primary:hover { background: #0860ca; }
+    .badge {
+      display: inline-block;
+      padding: .2rem .55rem;
+      border-radius: 20px;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .hidden { display: none !important; }
+    .empty {
+      text-align: center;
+      color: #656d76;
+      padding: 3rem 0;
+      font-size: .95rem;
+    }
+    .loading {
+      text-align: center;
+      color: #656d76;
+      padding: 2rem 0;
+    }
+    .error-box {
+      background: #fff8f8;
+      border: 1px solid #f5c2c2;
+      color: #b91c1c;
+      border-radius: 6px;
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    thead th {
+      background: #f6f8fa;
+      text-align: left;
+      padding: .65rem 1rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #656d76;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid #d0d7de;
+    }
+    tbody tr {
+      border-bottom: 1px solid #eaeef2;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f6f8fa; }
+    tbody tr.expanded { background: #f0f6ff; }
+    td {
+      padding: .7rem 1rem;
+      vertical-align: top;
+    }
+    td.title-cell { font-weight: 600; font-size: .95rem; }
+    td.time-cell { color: #656d76; font-size: .82rem; white-space: nowrap; }
+    td.expand-cell { color: #0969da; font-size: .85rem; white-space: nowrap; text-align: right; }
+    .answer-row td {
+      padding: 0;
+      cursor: default;
+    }
+    .answer-row:hover { background: #fff; }
+    .answer-row.expanded { background: #f0f6ff; }
+    .answer-content {
+      padding: .75rem 1rem 1rem 2rem;
+      font-size: .92rem;
+      line-height: 1.6;
+      color: #1f2328;
+      white-space: pre-wrap;
+      border-left: 3px solid #0969da;
+      margin: 0 1rem .75rem;
+      background: #fff;
+      border-radius: 0 4px 4px 0;
+    }
+    .token-prompt {
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      max-width: 480px;
+    }
+    .token-prompt h2 { font-size: 1rem; margin-bottom: .5rem; }
+    .token-prompt p { font-size: .85rem; color: #656d76; margin-bottom: .75rem; }
+    .token-row { display: flex; gap: .5rem; }
+    .token-row input {
+      flex: 1;
+      padding: .5rem .7rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .88rem;
+      outline: none;
+    }
+    .token-row input:focus { border-color: #0969da; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Feedback Results <span class="badge" id="count-badge">0</span></h1>
+        <p class="subtitle" id="session-label"></p>
+      </div>
+      <div class="toolbar">
+        <button onclick="loadResponses()">↻ Refresh</button>
+        <button onclick="expandAll()">Expand all</button>
+        <button onclick="collapseAll()">Collapse all</button>
+      </div>
+    </div>
+
+    <div id="error-box" class="error-box hidden"></div>
+
+    <div id="token-prompt" class="token-prompt hidden">
+      <h2>Enter GitHub Token (optional)</h2>
+      <p>For private repos or higher API rate limits, paste your token below.</p>
+      <div class="token-row">
+        <input type="password" id="manual-token" placeholder="ghp_…">
+        <button class="primary" onclick="applyToken()">Load</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">Loading responses…</div>
+    <div id="empty" class="empty hidden">No responses yet. Share the QR code to collect feedback.</div>
+    <table id="results-table" class="hidden">
+      <thead>
+        <tr>
+          <th style="width:50%">Title</th>
+          <th>Time</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const params  = new URLSearchParams(window.location.search);
+    const SESSION = params.get('session');
+    let   TOKEN   = params.get('token') || '';
+
+    function getGitHubInfo() {
+      const hostname = window.location.hostname;
+      if (!hostname.endsWith('.github.io')) return null;
+      const owner = hostname.replace('.github.io', '');
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const repo  = parts.length > 0 ? parts[0] : `${owner}.github.io`;
+      return { owner, repo };
+    }
+
+    const GH = getGitHubInfo();
+
+    function authHeaders() {
+      return TOKEN
+        ? { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/vnd.github+json' }
+        : { 'Accept': 'application/vnd.github+json' };
+    }
+
+    function parseResponse(text) {
+      const lines   = text.split('\n');
+      let title     = '';
+      let time      = '';
+      let sepIdx    = -1;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith('TITLE: ')) title = lines[i].slice(7).trim();
+        else if (lines[i].startsWith('TIME: '))  time  = lines[i].slice(6).trim();
+        else if (lines[i] === '---')              { sepIdx = i; break; }
+      }
+
+      const answer = sepIdx >= 0 ? lines.slice(sepIdx + 1).join('\n').trim() : text.trim();
+      return { title, time, answer };
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch { return iso; }
+    }
+
+    let responses = [];
+
+    async function loadResponses() {
+      if (!SESSION || !GH) {
+        showError('Missing session parameter in URL.');
+        document.getElementById('loading').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('results-table').classList.add('hidden');
+      document.getElementById('empty').classList.add('hidden');
+      hideError();
+
+      const { owner, repo } = GH;
+      const dirPath = `sessions/${SESSION}/responses`;
+
+      try {
+        const listRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`,
+          { headers: authHeaders() }
+        );
+
+        if (listRes.status === 404) {
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('empty').classList.remove('hidden');
+          document.getElementById('session-label').textContent = `Session: ${SESSION}`;
+          document.getElementById('count-badge').textContent = '0';
+          return;
+        }
+
+        if (listRes.status === 401 || listRes.status === 403) {
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('token-prompt').classList.remove('hidden');
+          showError('Authentication required. Enter your token below.');
+          return;
+        }
+
+        if (!listRes.ok) {
+          const body = await listRes.json().catch(() => ({}));
+          throw new Error(body.message || `GitHub API ${listRes.status}`);
+        }
+
+        const files = await listRes.json();
+        const txtFiles = Array.isArray(files)
+          ? files.filter(f => f.name.endsWith('.txt')).sort((a, b) => a.name.localeCompare(b.name))
+          : [];
+
+        responses = await Promise.all(
+          txtFiles.map(async f => {
+            const raw = await fetch(f.download_url);
+            const text = await raw.text();
+            return parseResponse(text);
+          })
+        );
+
+        renderTable();
+
+        // Try to load session title
+        try {
+          const metaRes = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/sessions/${SESSION}/session.json`,
+            { headers: authHeaders() }
+          );
+          if (metaRes.ok) {
+            const metaFile = await metaRes.json();
+            const metaText = atob(metaFile.content.replace(/\n/g, ''));
+            const meta = JSON.parse(metaText);
+            document.getElementById('session-label').textContent =
+              `${meta.title || SESSION}  ·  ${new Date(meta.created).toLocaleDateString()}`;
+          }
+        } catch (_) {
+          document.getElementById('session-label').textContent = `Session: ${SESSION}`;
+        }
+
+      } catch (err) {
+        document.getElementById('loading').classList.add('hidden');
+        showError(err.message);
+      }
+    }
+
+    function renderTable() {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('count-badge').textContent = responses.length;
+
+      if (responses.length === 0) {
+        document.getElementById('empty').classList.remove('hidden');
+        return;
+      }
+
+      const tbody = document.getElementById('results-body');
+      tbody.innerHTML = '';
+
+      responses.forEach((r, i) => {
+        const rowId = `row-${i}`;
+
+        const tr = document.createElement('tr');
+        tr.id = rowId;
+        tr.onclick = () => toggle(i);
+        tr.innerHTML = `
+          <td class="title-cell">${escHtml(r.title || '(no title)')}</td>
+          <td class="time-cell">${escHtml(formatTime(r.time))}</td>
+          <td class="expand-cell" id="arrow-${i}">▼ Show</td>
+        `;
+
+        const ar = document.createElement('tr');
+        ar.id = `answer-${i}`;
+        ar.className = 'answer-row hidden';
+        const td = document.createElement('td');
+        td.colSpan = 3;
+        const content = document.createElement('div');
+        content.className = 'answer-content';
+        content.textContent = r.answer;
+        td.appendChild(content);
+        ar.appendChild(td);
+
+        tbody.appendChild(tr);
+        tbody.appendChild(ar);
+      });
+
+      document.getElementById('results-table').classList.remove('hidden');
+    }
+
+    function toggle(i) {
+      const row    = document.getElementById(`row-${i}`);
+      const answer = document.getElementById(`answer-${i}`);
+      const arrow  = document.getElementById(`arrow-${i}`);
+      const open   = !answer.classList.contains('hidden');
+      if (open) {
+        answer.classList.add('hidden');
+        row.classList.remove('expanded');
+        arrow.textContent = '▼ Show';
+      } else {
+        answer.classList.remove('hidden');
+        row.classList.add('expanded');
+        answer.classList.add('expanded');
+        arrow.textContent = '▲ Hide';
+      }
+    }
+
+    function expandAll() {
+      responses.forEach((_, i) => {
+        document.getElementById(`answer-${i}`)?.classList.remove('hidden');
+        document.getElementById(`row-${i}`)?.classList.add('expanded');
+        const arrow = document.getElementById(`arrow-${i}`);
+        if (arrow) arrow.textContent = '▲ Hide';
+      });
+    }
+
+    function collapseAll() {
+      responses.forEach((_, i) => {
+        document.getElementById(`answer-${i}`)?.classList.add('hidden');
+        document.getElementById(`row-${i}`)?.classList.remove('expanded');
+        const arrow = document.getElementById(`arrow-${i}`);
+        if (arrow) arrow.textContent = '▼ Show';
+      });
+    }
+
+    function applyToken() {
+      TOKEN = document.getElementById('manual-token').value.trim();
+      document.getElementById('token-prompt').classList.add('hidden');
+      loadResponses();
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-box');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideError() { document.getElementById('error-box').classList.add('hidden'); }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadResponses();
+  </script>
+</body>
+</html>

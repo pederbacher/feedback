@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave Feedback</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f6f8fa;
+      color: #1f2328;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+    }
+    h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+    .subtitle { color: #656d76; font-size: .9rem; margin-bottom: 1.75rem; }
+    .field { margin-bottom: 1.1rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .35rem; }
+    input[type=text], textarea {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, textarea:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9,105,218,.12); }
+    textarea { resize: vertical; min-height: 130px; }
+    button.primary {
+      width: 100%;
+      padding: .65rem 1rem;
+      background: #0969da;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button.primary:hover { background: #0860ca; }
+    button.primary:disabled { background: #8ab6e8; cursor: not-allowed; }
+    .hidden { display: none !important; }
+    .error {
+      background: #fff8f8;
+      border: 1px solid #f5c2c2;
+      color: #b91c1c;
+      border-radius: 6px;
+      padding: .65rem .9rem;
+      font-size: .88rem;
+      margin-top: 1rem;
+    }
+    .success {
+      text-align: center;
+      padding: 2rem 0 1rem;
+    }
+    .success .icon {
+      font-size: 3rem;
+      margin-bottom: .75rem;
+    }
+    .success h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+    .success p { color: #656d76; font-size: .95rem; margin-bottom: 1.25rem; }
+    .success button {
+      padding: .55rem 1.5rem;
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #1f2328;
+    }
+    .success button:hover { background: #eaf0f8; }
+    .config-error {
+      color: #b91c1c;
+      text-align: center;
+      padding: 2rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="config-error" class="config-error hidden">
+      <p>⚠️ Invalid link — missing session or token.</p>
+    </div>
+
+    <div id="form-section" class="hidden">
+      <h1 id="page-title">Leave Feedback</h1>
+      <p class="subtitle">Fill in a title and your response, then hit Send.</p>
+      <div class="field">
+        <label for="title">Title</label>
+        <input type="text" id="title" placeholder="Short label for your response" maxlength="120">
+      </div>
+      <div class="field">
+        <label for="answer">Your answer</label>
+        <textarea id="answer" placeholder="Write your thoughts here…"></textarea>
+      </div>
+      <button class="primary" id="send-btn" onclick="sendResponse()">Send</button>
+      <div id="error" class="error hidden"></div>
+    </div>
+
+    <div id="success-section" class="success hidden">
+      <div class="icon">✓</div>
+      <h2>Response sent!</h2>
+      <p>Thank you for your feedback.</p>
+      <button onclick="resetForm()">Send another</button>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const SESSION = params.get('session');
+    const TOKEN   = params.get('token');
+
+    function getGitHubInfo() {
+      const hostname = window.location.hostname;
+      if (!hostname.endsWith('.github.io')) return null;
+      const owner = hostname.replace('.github.io', '');
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const repo  = parts.length > 0 ? parts[0] : `${owner}.github.io`;
+      return { owner, repo };
+    }
+
+    const GH = getGitHubInfo();
+
+    if (!SESSION || !TOKEN || !GH) {
+      document.getElementById('config-error').classList.remove('hidden');
+    } else {
+      document.getElementById('form-section').classList.remove('hidden');
+    }
+
+    function toBase64(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    async function sendResponse() {
+      const title  = document.getElementById('title').value.trim();
+      const answer = document.getElementById('answer').value.trim();
+
+      if (!title)  { showError('Please enter a title.'); return; }
+      if (!answer) { showError('Please enter your answer.'); return; }
+
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      hideError();
+
+      try {
+        const { owner, repo } = GH;
+        const ts       = Date.now();
+        const filename = `response-${ts}.txt`;
+        const path     = `sessions/${SESSION}/responses/${filename}`;
+
+        const content = [
+          `TITLE: ${title}`,
+          `TIME: ${new Date(ts).toISOString()}`,
+          `---`,
+          answer
+        ].join('\n');
+
+        const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${TOKEN}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: `Add response ${filename}`,
+            content: toBase64(content)
+          })
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || `GitHub API ${res.status}`);
+        }
+
+        document.getElementById('form-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+      } catch (err) {
+        showError('Could not save response: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Send';
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('title').value  = '';
+      document.getElementById('answer').value = '';
+      document.getElementById('success-section').classList.add('hidden');
+      document.getElementById('form-section').classList.remove('hidden');
+      const btn = document.getElementById('send-btn');
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideError() { document.getElementById('error').classList.add('hidden'); }
+  </script>
+</body>
+</html>
