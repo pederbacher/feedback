@@ -1,0 +1,7 @@
+TITLE: Modeling
+TIME: 2026-04-17T10:24:21.094Z
+---
+Neural network in modeling part is missing
+
+
+I definitely agree that one week on control after one week of modeling is necessary.
