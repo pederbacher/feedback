@@ -1,0 +1,5 @@
+TITLE: Kyril's feedback
+TIME: 2026-04-17T10:21:18.080Z
+---
+Great stuff ! I totally agree in seperating modelling and control in 2 summer schools. 
+Important though that people don't see it at two different things, the model is there for the controller only (or forecast).
